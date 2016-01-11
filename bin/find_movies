@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require_relative "../lib/classes.rb"
+require_relative "../lib/discover.rb"
 
 Discover.get_user_and_theater_info
 Discover.display_theaters_near_you
