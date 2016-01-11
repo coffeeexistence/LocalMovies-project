@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
+puts "\n\nWARNING: You should probably be using ruby 2.2.4\n\n" if RUBY_VERSION!="2.2.4"
 require_relative "../lib/discover.rb"
+
+
 
 Discover.get_user_and_theater_info
 Discover.display_theaters_near_you
