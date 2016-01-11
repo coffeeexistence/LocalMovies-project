@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+require_relative "../lib/classes.rb"
+
+Discover.get_user_and_theater_info
+Discover.display_theaters_near_you
+Discover.display_available_movies
+Discover.display_movies_over_75
+Discover.start

@@ -2,11 +2,69 @@ require 'json'
 require 'excon'
 require 'pry'
 require 'nokogiri'
+require 'colorize'
 
 Excon.defaults[:middlewares] << Excon::Middleware::RedirectFollower # will make sure to follow redirects, for better or worse
 
 
-class Application
+class Discover
+
+	def self.get_user_and_theater_info
+		User.set_location_interactive()
+		print "Fetching local theater & movie data"
+		Scrape.add_fandango_theaters
+		puts ""
+	end
+
+	def self.display_theaters_near_you
+		puts ""
+		puts "Theaters near you:"
+		Theater.all.each do |theater| 
+			Textify.format("    "+theater.name, "|  "+theater.location.distance_miles_text+" away", 40)
+		end
+	end
+
+	def self.display_available_movies
+		puts ""
+		puts "Movies Available:"
+		movie_hash={}
+		Movie.all.each{|movie| movie_hash["    "+movie.rating_percent]=movie.name_and_info}
+		Textify.print_2col_list(movie_hash)
+	end
+
+	def self.display_movies_over_75
+		puts ""
+		puts "Movies worth your money:"
+		movie_hash={}
+		Movie.over_75_rating.each_with_index{|movie, index| movie_hash["  " + "[#{index.to_s}] " + movie.name_and_info] = movie.rating_percent}
+		Textify.print_2col_list(movie_hash)
+	end
+
+	def self.start
+		while true
+			puts "\n\n"
+			print "Enter movie # to see showtimes, type 'exit' to leave: "
+			input = gets.chomp.strip
+			puts ""
+			break if input == "exit"
+			self.get_and_display_showtimes(input)
+		end
+	end
+
+	def self.get_and_display_showtimes(input)
+		movie = Movie.over_75_rating[input.to_i]
+		puts ""
+		puts "____________________________________________________"
+		puts ""
+		puts "Movie Selected: "+movie.name.blue.bold
+		movie.display_showtimes_all
+		puts "____________________________________________________"
+
+	end
+
+end
+
+class User
 	@@user_location=""
 	def self.user_location
     	@@user_location
@@ -23,7 +81,7 @@ class Application
   			@@user_location=location_class.origin_result_full
   			return "Location forced to #{location_class.origin_result_full}"
   		end
-  		print "Please enter your street address & zip code :"
+  		print "Please enter your street address & zip code: "
 		location=gets.chomp.strip
 		
 		location_class=Maps_Distance_API.new(location, test_destination)
@@ -80,7 +138,7 @@ class Scrape
     end
 
     def self.get_fandango_theater_arr
-    	zip = Application.zip_code
+    	zip = User.zip_code
     	initial_url = "http://www.fandango.com/#{zip}_movietimes" 
     	page = self.get_page(initial_url)
     	#puts page
@@ -172,14 +230,14 @@ class Movie
 	end
 
 	def display_showtimes_all
-		puts "  Regular:"
+		puts "  "+"Regular:".underline
 		self.display_showtimes
 		if self.has_3d
-			puts "  3D:"
+			puts "  "+"3D:".underline
 			self.display_showtimes_3d
 		end
 		if self.has_imax
-			puts "  IMAX"
+			puts "  "+"IMAX:".underline
 			self.display_showtimes_imax
 		end
 		puts ""
@@ -189,7 +247,7 @@ class Movie
 		self.showtimes.each do |theater, showtimes|
 			next if showtimes==nil
 			puts "    "+theater.name+" - "+theater.location.distance_miles_text
-			showtimes_str = showtimes.join(" - ")
+			showtimes_str = showtimes.join(" - ").yellow
 			puts "      "+showtimes_str
 		end 
 	end
@@ -198,7 +256,7 @@ class Movie
 		self.showtimes_3d.each do |theater, showtimes|
 			next if showtimes==nil
 			puts "    "+theater.name+" - "+theater.location.distance_miles_text
-			showtimes_str = showtimes.join(" - ")
+			showtimes_str = showtimes.join(" - ").yellow
 			puts "      "+showtimes_str
 		end 
 	end
@@ -207,7 +265,7 @@ class Movie
 		self.showtimes_imax.each do |theater, showtimes|
 			next if showtimes==nil
 			puts "    "+theater.name+" - "+theater.location.distance_miles_text
-			showtimes_str = showtimes.join(" - ")
+			showtimes_str = showtimes.join(" - ").yellow
 			puts "      "+showtimes_str
 		end 
 	end
@@ -272,7 +330,7 @@ class Theater
 		@movie_showtimes_hash={}
 		@showtimes_imax_hash={}
 		@showtimes_3d_hash={}
-		location_class = Maps_Distance_API.new(Application.user_location, address)
+		location_class = Maps_Distance_API.new(User.user_location, address)
 		if location_class.parameters_valid? 
 			@location=location_class
 			#puts "Theater '#{@name}' At #{location_class.destination_result_full}"
